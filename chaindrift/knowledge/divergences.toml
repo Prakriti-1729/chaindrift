@@ -1,0 +1,192 @@
+# The divergence database: for each rule, how the flagged construct behaves on each chain.
+#
+# severity: none | info | low | medium | high | check
+#   none   -> behaves as on Ethereum (not reported)
+#   check  -> we do not know with confidence; verify on the chain's docs before deploying
+# confidence: high | medium | low  (how sure the database is about the note itself)
+#
+# A rule's [default] applies to any chain without its own entry.
+# Notes may use {chain} and {block_time_s}.
+
+# ---------------------------------------------------------------------------
+[rules.block-number]
+title = "block.number has chain-specific meaning"
+description = "Code reads block.number. Block numbers advance at different rates on every chain, and on some chains block.number is not even the chain's own block height."
+fix = "Measure time with block.timestamp. If you truly need L2 block height on Arbitrum, call ArbSys(0x64).arbBlockNumber()."
+references = [
+  "https://docs.arbitrum.io/build-decentralized-apps/arbitrum-vs-ethereum/block-numbers-and-time",
+]
+default = { severity = "low", confidence = "high", note = "Blocks arrive about every {block_time_s}s instead of 12s, so any blocks-as-time logic (vesting, rate limits, interest per block) runs at a different speed." }
+
+[rules.block-number.chains]
+ethereum = { severity = "none", confidence = "high", note = "Reference behaviour: ~12s slots." }
+arbitrum = { severity = "high", confidence = "high", note = "block.number returns an approximation of the L1 (Ethereum) block number, which updates in bursts. It is not the Arbitrum block height; use ArbSys(0x64).arbBlockNumber() for that." }
+bsc = { severity = "medium", confidence = "medium", note = "Block time was cut repeatedly (3s -> 1.5s -> 0.75s in 2025 hardforks); constants derived from block counts silently changed meaning." }
+
+# ---------------------------------------------------------------------------
+[rules.prevrandao]
+title = "block.prevrandao / block.difficulty used"
+description = "Code reads block.prevrandao (or its legacy alias block.difficulty), usually as a randomness source. On most L2s this value is a constant or is known in advance."
+fix = "Use a verifiable randomness oracle (e.g. a VRF) or a commit-reveal scheme. Never use block values for anything an attacker profits from predicting."
+references = [
+  "https://eips.ethereum.org/EIPS/eip-4399",
+]
+default = { severity = "high", confidence = "medium", note = "Not a randomness beacon on {chain}; the value is fixed or predictable." }
+
+[rules.prevrandao.chains]
+ethereum = { severity = "medium", confidence = "high", note = "RANDAO output: unpredictable far ahead, but the block proposer can bias it by withholding a block." }
+arbitrum = { severity = "high", confidence = "high", note = "block.prevrandao / block.difficulty always returns the constant 1." }
+optimism = { severity = "high", confidence = "medium", note = "Returns the RANDAO of the L1 origin block. It is public on L1 before the L2 block is built, so the sequencer and observers can predict it." }
+base = { severity = "high", confidence = "medium", note = "OP Stack: returns the RANDAO of the L1 origin block, which is public before the L2 block is built." }
+zksync = { severity = "high", confidence = "medium", note = "Returns a fixed constant (2500000000000000), not randomness." }
+scroll = { severity = "high", confidence = "medium", note = "Returns 0 (Scroll does not expose a RANDAO value)." }
+avalanche = { severity = "high", confidence = "medium", note = "Not a RANDAO beacon; block.difficulty historically returns 1." }
+
+# ---------------------------------------------------------------------------
+[rules.transfer-send]
+title = ".transfer() / .send() with a 2300 gas stipend"
+description = "Native currency is sent with .transfer() or .send(), which forward only 2300 gas. Whether 2300 gas is enough depends on the chain's gas schedule and on what code the recipient runs."
+fix = "Use (bool ok, ) = to.call{value: amount}(\"\"); require(ok); and protect against reentrancy (checks-effects-interactions or a reentrancy guard)."
+references = [
+  "https://docs.zksync.io/zksync-protocol/differences/evm-instructions",
+  "https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/",
+]
+default = { severity = "low", confidence = "high", note = "Fails for smart-wallet recipients with non-trivial receive() logic, and for EIP-7702 delegated EOAs where that EIP is live." }
+
+[rules.transfer-send.chains]
+zksync = { severity = "high", confidence = "high", note = "EraVM gas costs differ, so 2300 gas is often not enough even for simple recipients. This is the bug class behind ~921 ETH stuck in the Gemholic contract (2023)." }
+
+# ---------------------------------------------------------------------------
+[rules.create2-address]
+title = "CREATE / CREATE2 address assumptions"
+description = "Code precomputes a CREATE2 address, deploys raw bytecode with create/create2, or relies on salted deployment producing the same address everywhere."
+fix = "On ZKsync, use the chain's own address-derivation helper and make sure deployed bytecode is known at compile time (factory dependencies). Never assume a counterfactual address is identical across chains without testing."
+references = [
+  "https://docs.zksync.io/zksync-protocol/differences/evm-instructions",
+]
+default = { severity = "none", confidence = "high", note = "Standard EVM address derivation." }
+
+[rules.create2-address.chains]
+zksync = { severity = "high", confidence = "high", note = "CREATE2 uses a different derivation (keccak256(\"zksyncCreate2\") prefix, bytecode hash and a separate constructor-input hash). Precomputed EVM addresses are wrong, and deploying arbitrary runtime bytecode needs it declared as a factory dependency." }
+
+# ---------------------------------------------------------------------------
+[rules.selfdestruct]
+title = "selfdestruct used"
+description = "SELFDESTRUCT is deprecated (EIP-6049) and its behaviour changed in Cancun (EIP-6780): it only deletes code and storage when called in the same transaction that created the contract. Chains adopted this at different times, and some disable the opcode entirely."
+fix = "Remove selfdestruct. Use a pausable / withdraw pattern for shutdown, and never rely on redeploying to the same address after destruction."
+references = [
+  "https://eips.ethereum.org/EIPS/eip-6780",
+  "https://eips.ethereum.org/EIPS/eip-6049",
+]
+default = { severity = "medium", confidence = "medium", note = "Semantics depend on whether and when {chain} adopted EIP-6780; metamorphic / redeploy patterns break." }
+
+[rules.selfdestruct.chains]
+ethereum = { severity = "medium", confidence = "high", note = "Since Cancun only sends the balance; code and storage are kept unless destroyed in the creating transaction." }
+zksync = { severity = "high", confidence = "medium", note = "Not supported by EraVM; the ZKsync compiler rejects it." }
+scroll = { severity = "high", confidence = "medium", note = "SELFDESTRUCT is disabled on Scroll and reverts." }
+
+# ---------------------------------------------------------------------------
+[rules.hardcoded-gas]
+title = "Hardcoded gas amounts"
+description = "Code forwards a constant gas amount (call{gas: N}) or compares gasleft() to a constant. Gas schedules differ between chains, so constants tuned on Ethereum can starve calls elsewhere."
+fix = "Avoid fixed gas forwarding. If a limit is required, make it configurable per deployment and test it on every target chain."
+references = [
+  "https://docs.arbitrum.io/build-decentralized-apps/arbitrum-vs-ethereum/rpc-methods",
+  "https://docs.zksync.io/zksync-protocol/differences/evm-instructions",
+]
+default = { severity = "low", confidence = "medium", note = "Opcode gas costs on {chain} may differ from Ethereum's; re-test the constant there." }
+
+[rules.hardcoded-gas.chains]
+ethereum = { severity = "none", confidence = "high", note = "Reference gas schedule." }
+arbitrum = { severity = "medium", confidence = "high", note = "L1 data cost is charged as extra L2 gas, so gas used and gasleft() behave differently from Ethereum." }
+zksync = { severity = "high", confidence = "high", note = "EraVM opcode costs and pubdata charging differ substantially; hardcoded gas limits frequently fail." }
+
+# ---------------------------------------------------------------------------
+[rules.gas-price]
+title = "tx.gasprice / block.basefee used to estimate cost"
+description = "Code reads tx.gasprice or block.basefee, often to refund or reimburse gas. On rollups the real fee has a separate L1 data component that these values do not include."
+fix = "Use the chain's fee oracle (e.g. GasPriceOracle 0x420...000F on OP Stack, ArbGasInfo 0x6C on Arbitrum) or avoid on-chain fee reimbursement maths."
+references = [
+  "https://docs.optimism.io/stack/transactions/fees",
+  "https://docs.arbitrum.io/how-arbitrum-works/gas-fees",
+]
+default = { severity = "low", confidence = "medium", note = "Fee market on {chain} differs from Ethereum's; verify what these values represent." }
+
+[rules.gas-price.chains]
+ethereum = { severity = "none", confidence = "high", note = "Reference fee market (EIP-1559)." }
+arbitrum = { severity = "medium", confidence = "high", note = "The L1 data cost is folded into gas used, not into the price, so price-times-gas maths is skewed." }
+optimism = { severity = "medium", confidence = "high", note = "Total fee = L2 execution fee + a separate L1 data fee; tx.gasprice * gasUsed underestimates the real cost." }
+base = { severity = "medium", confidence = "high", note = "OP Stack: a separate L1 data fee is charged on top of tx.gasprice * gasUsed." }
+scroll = { severity = "medium", confidence = "medium", note = "An L1 data fee is charged separately from the L2 gas price." }
+zksync = { severity = "medium", confidence = "medium", note = "Fees include pubdata costs; gas price semantics differ from Ethereum." }
+
+# ---------------------------------------------------------------------------
+[rules.eoa-check]
+title = "EOA / no-contract assumptions"
+description = "Code tries to tell people from contracts (tx.origin == msg.sender, extcodesize == 0, address.code.length == 0). EIP-7702 lets ordinary accounts carry delegated code, and some chains have native account abstraction, so these checks no longer mean what they used to."
+fix = "Do not use EOA checks as a security boundary. If you need to block flash-loan style composition, use explicit design (commit-reveal, time delays) instead."
+references = [
+  "https://eips.ethereum.org/EIPS/eip-7702",
+]
+default = { severity = "check", confidence = "low", note = "Unknown whether {chain} has enabled EIP-7702; if it has, EOA checks can be bypassed." }
+
+[rules.eoa-check.chains]
+ethereum = { severity = "medium", confidence = "high", note = "EIP-7702 (Pectra, 2025): EOAs can delegate to contract code, so code.length == 0 no longer proves an EOA, and an EOA calling itself can run batched contract logic while tx.origin == msg.sender holds." }
+optimism = { severity = "medium", confidence = "medium", note = "EIP-7702 is live (Isthmus upgrade); same caveats as Ethereum." }
+base = { severity = "medium", confidence = "medium", note = "EIP-7702 is live (Isthmus upgrade); same caveats as Ethereum." }
+bsc = { severity = "medium", confidence = "medium", note = "EIP-7702 is live (Pascal hardfork); same caveats as Ethereum." }
+zksync = { severity = "medium", confidence = "high", note = "Native account abstraction: smart accounts are first-class, so EOA checks are unreliable by design." }
+
+# ---------------------------------------------------------------------------
+[rules.chainid-replay]
+title = "Signature domain may be replayable across chains"
+description = "The contract builds an EIP-712 domain separator without block.chainid, or caches it once at deploy time and never re-checks the chain id. Signatures made for one chain can then be valid on another chain (or a fork) where the same contract address exists."
+fix = "Include block.chainid in the EIP-712 domain, and recompute the separator when block.chainid differs from the cached value (as OpenZeppelin's EIP712 does)."
+references = [
+  "https://eips.ethereum.org/EIPS/eip-712",
+  "https://docs.openzeppelin.com/contracts/5.x/api/utils#EIP712",
+]
+default = { severity = "high", confidence = "high", note = "Same-address deployments on {chain} and other chains could accept each other's signatures." }
+
+# ---------------------------------------------------------------------------
+[rules.chain-gated-logic]
+title = "Behaviour branches on a hardcoded chain id"
+description = "The contract compares block.chainid with a literal. That is sometimes intended, but it means the code takes a different path on chains the author may not have tested."
+fix = "Prefer per-deployment configuration over hardcoded chain ids, and make sure every target chain has an explicit, tested branch."
+references = []
+default = { severity = "info", confidence = "high", note = "Logic on {chain} depends on which chain ids the author hardcoded." }
+
+[rules.chainid-replay.variants.no-chainid]
+default = { severity = "high", confidence = "high", note = "The EIP-712 domain has no chainId field, so a signature is valid on every chain where this contract exists at the same address." }
+
+[rules.chainid-replay.variants.hardcoded]
+default = { severity = "high", confidence = "medium", note = "The domain declares a chainId field but the contract never reads block.chainid, so the value is probably hardcoded and the same signature works on every chain." }
+
+[rules.chainid-replay.variants.cached]
+default = { severity = "medium", confidence = "medium", note = "The domain separator is computed once at deployment and block.chainid is never re-checked, so after a chain split (fork) signatures are valid on both sides." }
+
+[rules.create2-address.variants.salted-new]
+default = { severity = "none", confidence = "high", note = "Standard EVM address derivation." }
+[rules.create2-address.variants.salted-new.chains]
+zksync = { severity = "medium", confidence = "high", note = "Salted deployment works, but yields a different address than on EVM chains, so 'same address on every chain' plans break." }
+
+# ---------------------------------------------------------------------------
+# Rules below are assessed from their own tables (precompiles.toml, addresses.toml, opcodes.toml).
+
+[rules.precompile]
+title = "Precompile whose availability differs between chains"
+description = "The contract calls a precompiled contract. Precompile sets differ between chains, and calling a missing precompile does not revert: the call succeeds with empty return data."
+fix = "Check the precompile exists on every target chain, check returndata length after the call, and keep a pure-Solidity fallback where one is practical."
+references = ["https://www.evm.codes/precompiled"]
+
+[rules.known-address]
+title = "Hardcoded chain-specific address"
+description = "The contract hardcodes an address that only means something on some chains (a token, an oracle, a system contract or a factory)."
+fix = "Pass chain-specific addresses in at deployment (constructor or initializer arguments, or a per-chain config file in your deploy scripts) instead of hardcoding them."
+references = []
+
+[rules.opcode-support]
+title = "Compiled bytecode uses a recent opcode"
+description = "The compiled bytecode contains an opcode added in a recent hard fork. Modern compilers emit some of these automatically, so the contract may fail to deploy, or behave differently, on chains that lag behind Ethereum's upgrades."
+fix = "Set the compiler's evmVersion to the oldest EVM version among your target chains (for example --evm-version paris to avoid PUSH0 and MCOPY), then re-run ChainDrift."
+references = ["https://docs.soliditylang.org/en/latest/using-the-compiler.html#target-options"]

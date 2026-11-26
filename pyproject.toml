@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chaindrift"
+version = "0.1.0"
+description = "Static analyzer that finds Solidity code whose behaviour diverges across EVM chains (Arbitrum, OP Stack, ZKsync, Scroll, ...)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-only" }
+dependencies = ["slither-analyzer>=0.10"]
+keywords = ["solidity", "ethereum", "security", "static-analysis", "layer2", "rollup", "slither"]
+classifiers = [
+  "Topic :: Security",
+  "Topic :: Software Development :: Quality Assurance",
+  "Programming Language :: Python :: 3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+chaindrift = "chaindrift.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["chaindrift*"]
+
+[tool.setuptools.package-data]
+"chaindrift.knowledge" = ["*.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

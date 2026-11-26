@@ -1,0 +1,153 @@
+# Precompile availability per chain.
+# support: yes | no | limited | unknown
+#   yes      -> behaves as on Ethereum (not reported)
+#   no       -> missing. DANGER: a call to an address with no code SUCCEEDS with empty return data,
+#               so code that does not check returndata length can silently accept garbage.
+#   limited  -> present with restrictions (input size, pair count...)
+#   unknown  -> we could not confirm; verify on the chain's docs
+# A chain absent from `chains` is assumed "yes" for pre-Cancun precompiles and "unknown" otherwise
+# (see `assume` below).
+
+[precompiles.0x01]
+name = "ecrecover"
+fork = "Frontier"
+assume = "yes"
+
+[precompiles.0x02]
+name = "sha256"
+fork = "Frontier"
+assume = "yes"
+
+[precompiles.0x03]
+name = "ripemd160"
+fork = "Frontier"
+assume = "yes"
+[precompiles.0x03.chains]
+zksync = { support = "no", confidence = "medium", note = "RIPEMD-160 is not available as a precompile on ZKsync Era." }
+scroll = { support = "no", confidence = "medium", note = "RIPEMD-160 is not supported on Scroll." }
+linea = { support = "unknown", confidence = "low", note = "" }
+
+[precompiles.0x04]
+name = "identity"
+fork = "Frontier"
+assume = "yes"
+
+[precompiles.0x05]
+name = "modexp"
+fork = "Byzantium"
+assume = "yes"
+[precompiles.0x05.chains]
+scroll = { support = "limited", confidence = "medium", note = "modexp on Scroll only accepts inputs up to 32 bytes (base, exponent and modulus)." }
+zksync = { support = "unknown", confidence = "low", note = "" }
+linea = { support = "unknown", confidence = "low", note = "" }
+
+[precompiles.0x06]
+name = "ecAdd (alt_bn128)"
+fork = "Byzantium"
+assume = "yes"
+
+[precompiles.0x07]
+name = "ecMul (alt_bn128)"
+fork = "Byzantium"
+assume = "yes"
+
+[precompiles.0x08]
+name = "ecPairing (alt_bn128)"
+fork = "Byzantium"
+assume = "yes"
+[precompiles.0x08.chains]
+scroll = { support = "limited", confidence = "medium", note = "ecPairing on Scroll is limited to a small number of pairs per call (historically 4)." }
+
+[precompiles.0x09]
+name = "blake2f"
+fork = "Istanbul"
+assume = "yes"
+[precompiles.0x09.chains]
+zksync = { support = "no", confidence = "medium", note = "blake2f is not available on ZKsync Era." }
+scroll = { support = "no", confidence = "medium", note = "blake2f is not supported on Scroll." }
+linea = { support = "unknown", confidence = "low", note = "" }
+
+[precompiles.0x0a]
+name = "KZG point evaluation"
+fork = "Cancun (EIP-4844)"
+assume = "unknown"
+[precompiles.0x0a.chains]
+ethereum = { support = "yes", confidence = "high", note = "" }
+optimism = { support = "yes", confidence = "medium", note = "" }
+base = { support = "yes", confidence = "medium", note = "" }
+zksync = { support = "no", confidence = "medium", note = "Not available on ZKsync Era." }
+
+[precompiles.0x0b]
+name = "BLS12_G1ADD"
+fork = "Prague (EIP-2537)"
+assume = "unknown"
+[precompiles.0x0b.chains]
+ethereum = { support = "yes", confidence = "high", note = "" }
+optimism = { support = "yes", confidence = "medium", note = "" }
+base = { support = "yes", confidence = "medium", note = "" }
+
+[precompiles.0x0c]
+name = "BLS12_G1MSM"
+fork = "Prague (EIP-2537)"
+assume = "unknown"
+[precompiles.0x0c.chains]
+ethereum = { support = "yes", confidence = "high", note = "" }
+optimism = { support = "yes", confidence = "medium", note = "" }
+base = { support = "yes", confidence = "medium", note = "" }
+
+[precompiles.0x0d]
+name = "BLS12_G2ADD"
+fork = "Prague (EIP-2537)"
+assume = "unknown"
+[precompiles.0x0d.chains]
+ethereum = { support = "yes", confidence = "high", note = "" }
+optimism = { support = "yes", confidence = "medium", note = "" }
+base = { support = "yes", confidence = "medium", note = "" }
+
+[precompiles.0x0e]
+name = "BLS12_G2MSM"
+fork = "Prague (EIP-2537)"
+assume = "unknown"
+[precompiles.0x0e.chains]
+ethereum = { support = "yes", confidence = "high", note = "" }
+optimism = { support = "yes", confidence = "medium", note = "" }
+base = { support = "yes", confidence = "medium", note = "" }
+
+[precompiles.0x0f]
+name = "BLS12_PAIRING_CHECK"
+fork = "Prague (EIP-2537)"
+assume = "unknown"
+[precompiles.0x0f.chains]
+ethereum = { support = "yes", confidence = "high", note = "" }
+optimism = { support = "yes", confidence = "medium", note = "" }
+base = { support = "yes", confidence = "medium", note = "" }
+
+[precompiles.0x10]
+name = "BLS12_MAP_FP_TO_G1"
+fork = "Prague (EIP-2537)"
+assume = "unknown"
+[precompiles.0x10.chains]
+ethereum = { support = "yes", confidence = "high", note = "" }
+optimism = { support = "yes", confidence = "medium", note = "" }
+base = { support = "yes", confidence = "medium", note = "" }
+
+[precompiles.0x11]
+name = "BLS12_MAP_FP2_TO_G2"
+fork = "Prague (EIP-2537)"
+assume = "unknown"
+[precompiles.0x11.chains]
+ethereum = { support = "yes", confidence = "high", note = "" }
+optimism = { support = "yes", confidence = "medium", note = "" }
+base = { support = "yes", confidence = "medium", note = "" }
+
+[precompiles.0x100]
+name = "P256VERIFY (secp256r1)"
+fork = "RIP-7212 on L2s / Osaka (EIP-7951) on Ethereum"
+assume = "unknown"
+[precompiles.0x100.chains]
+ethereum = { support = "yes", confidence = "medium", note = "Live since the Fusaka upgrade (EIP-7951)." }
+arbitrum = { support = "yes", confidence = "high", note = "" }
+optimism = { support = "yes", confidence = "high", note = "" }
+base = { support = "yes", confidence = "high", note = "" }
+zksync = { support = "yes", confidence = "medium", note = "" }
+polygon = { support = "yes", confidence = "medium", note = "" }

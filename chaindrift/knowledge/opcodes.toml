@@ -1,0 +1,92 @@
+# Opcodes added in recent hard forks, found by scanning the compiled bytecode.
+# Modern solc emits several of these automatically (PUSH0 since 0.8.20, MCOPY since 0.8.25),
+# so a contract can depend on them without the author writing any assembly.
+#
+# Per chain: severity none | info | low | medium | high | check (same scale as divergences.toml).
+# `default` applies to chains without their own entry.
+
+[vm_notes.zksync]
+severity = "info"
+confidence = "high"
+note = "ZKsync Era runs EraVM: native deployments are compiled from source with zksolc, so this EVM-bytecode check does not apply. EVM bytecode deployed as-is runs through the EVM interpreter with different gas costs."
+
+[opcodes.PUSH0]
+byte = 0x5f
+fork = "Shanghai"
+eip = 3855
+default = { severity = "none", confidence = "medium", note = "" }
+[opcodes.PUSH0.chains]
+linea = { severity = "check", confidence = "low", note = "Linea historically targeted the London EVM (no PUSH0). Confirm its current EVM version, or compile with --evm-version paris." }
+
+[opcodes.TLOAD]
+byte = 0x5c
+fork = "Cancun"
+eip = 1153
+default = { severity = "check", confidence = "low", note = "Transient storage (EIP-1153): confirm {chain} has activated Cancun opcodes." }
+[opcodes.TLOAD.chains]
+ethereum = { severity = "none", confidence = "high", note = "" }
+arbitrum = { severity = "none", confidence = "high", note = "" }
+optimism = { severity = "none", confidence = "high", note = "" }
+base = { severity = "none", confidence = "high", note = "" }
+scroll = { severity = "none", confidence = "medium", note = "" }
+polygon = { severity = "none", confidence = "medium", note = "" }
+bsc = { severity = "none", confidence = "medium", note = "" }
+avalanche = { severity = "none", confidence = "medium", note = "" }
+
+[opcodes.TSTORE]
+byte = 0x5d
+fork = "Cancun"
+eip = 1153
+default = { severity = "check", confidence = "low", note = "Transient storage (EIP-1153): confirm {chain} has activated Cancun opcodes." }
+[opcodes.TSTORE.chains]
+ethereum = { severity = "none", confidence = "high", note = "" }
+arbitrum = { severity = "none", confidence = "high", note = "" }
+optimism = { severity = "none", confidence = "high", note = "" }
+base = { severity = "none", confidence = "high", note = "" }
+scroll = { severity = "none", confidence = "medium", note = "" }
+polygon = { severity = "none", confidence = "medium", note = "" }
+bsc = { severity = "none", confidence = "medium", note = "" }
+avalanche = { severity = "none", confidence = "medium", note = "" }
+
+[opcodes.MCOPY]
+byte = 0x5e
+fork = "Cancun"
+eip = 5656
+default = { severity = "check", confidence = "low", note = "MCOPY (EIP-5656) is emitted automatically by solc >= 0.8.25 when targeting Cancun or later; confirm {chain} supports it." }
+[opcodes.MCOPY.chains]
+ethereum = { severity = "none", confidence = "high", note = "" }
+arbitrum = { severity = "none", confidence = "high", note = "" }
+optimism = { severity = "none", confidence = "high", note = "" }
+base = { severity = "none", confidence = "high", note = "" }
+scroll = { severity = "none", confidence = "medium", note = "" }
+polygon = { severity = "none", confidence = "medium", note = "" }
+bsc = { severity = "none", confidence = "medium", note = "" }
+avalanche = { severity = "none", confidence = "medium", note = "" }
+
+[opcodes.BLOBHASH]
+byte = 0x49
+fork = "Cancun"
+eip = 4844
+default = { severity = "check", confidence = "low", note = "Blob transactions may not exist on {chain}; confirm what BLOBHASH returns there." }
+[opcodes.BLOBHASH.chains]
+ethereum = { severity = "none", confidence = "high", note = "" }
+optimism = { severity = "medium", confidence = "medium", note = "L2 transactions carry no blobs, so BLOBHASH always returns 0." }
+base = { severity = "medium", confidence = "medium", note = "L2 transactions carry no blobs, so BLOBHASH always returns 0." }
+
+[opcodes.BLOBBASEFEE]
+byte = 0x4a
+fork = "Cancun"
+eip = 7516
+default = { severity = "check", confidence = "low", note = "Confirm what BLOBBASEFEE returns on {chain}." }
+[opcodes.BLOBBASEFEE.chains]
+ethereum = { severity = "none", confidence = "high", note = "" }
+optimism = { severity = "medium", confidence = "medium", note = "There is no L2 blob market; BLOBBASEFEE returns a constant (1)." }
+base = { severity = "medium", confidence = "medium", note = "There is no L2 blob market; BLOBBASEFEE returns a constant (1)." }
+
+[opcodes.CLZ]
+byte = 0x1e
+fork = "Osaka"
+eip = 7939
+default = { severity = "check", confidence = "low", note = "CLZ is an Osaka (Fusaka) opcode; confirm {chain} has activated it." }
+[opcodes.CLZ.chains]
+ethereum = { severity = "none", confidence = "medium", note = "" }

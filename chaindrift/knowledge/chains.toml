@@ -1,0 +1,95 @@
+# Chain profiles used by ChainDrift.
+#
+# Every fact here reflects public documentation as of mid-2026. Chains upgrade often:
+# treat this file as a living database and verify against the `docs` link before relying on it.
+# Contributions that add a source and bump `reviewed` are the most valuable PRs this project can get.
+
+[chains.ethereum]
+name = "Ethereum"
+chain_id = 1
+kind = "L1"
+vm = "EVM"
+block_time_s = 12
+docs = "https://ethereum.org/en/developers/docs/"
+reviewed = "2026-06"
+
+[chains.arbitrum]
+name = "Arbitrum One"
+chain_id = 42161
+kind = "Optimistic rollup (Nitro)"
+vm = "EVM (ArbOS)"
+block_time_s = 0.25
+docs = "https://docs.arbitrum.io/build-decentralized-apps/arbitrum-vs-ethereum/solidity-support"
+reviewed = "2026-06"
+
+[chains.optimism]
+name = "OP Mainnet"
+chain_id = 10
+kind = "Optimistic rollup (OP Stack)"
+vm = "EVM"
+block_time_s = 2
+docs = "https://docs.optimism.io/stack/differences"
+reviewed = "2026-06"
+
+[chains.base]
+name = "Base"
+chain_id = 8453
+kind = "Optimistic rollup (OP Stack)"
+vm = "EVM"
+block_time_s = 2
+docs = "https://docs.base.org/"
+reviewed = "2026-06"
+
+[chains.zksync]
+name = "ZKsync Era"
+chain_id = 324
+kind = "ZK rollup"
+vm = "EraVM (EVM via interpreter)"
+block_time_s = 1
+docs = "https://docs.zksync.io/zksync-protocol/differences/evm-instructions"
+reviewed = "2026-06"
+
+[chains.scroll]
+name = "Scroll"
+chain_id = 534352
+kind = "ZK rollup (zkEVM)"
+vm = "EVM"
+block_time_s = 3
+docs = "https://docs.scroll.io/en/developers/ethereum-and-scroll-differences/"
+reviewed = "2026-06"
+
+[chains.linea]
+name = "Linea"
+chain_id = 59144
+kind = "ZK rollup (zkEVM)"
+vm = "EVM"
+block_time_s = 2
+docs = "https://docs.linea.build/get-started/build/ethereum-differences"
+reviewed = "2026-06"
+
+[chains.polygon]
+name = "Polygon PoS"
+chain_id = 137
+kind = "PoS sidechain (Bor)"
+vm = "EVM"
+block_time_s = 2
+docs = "https://docs.polygon.technology/pos/"
+reviewed = "2026-06"
+
+[chains.bsc]
+name = "BNB Smart Chain"
+chain_id = 56
+kind = "PoSA L1"
+vm = "EVM"
+block_time_s = 0.75
+docs = "https://docs.bnbchain.org/"
+reviewed = "2026-06"
+
+[chains.avalanche]
+name = "Avalanche C-Chain"
+chain_id = 43114
+kind = "L1 (Snowman)"
+vm = "EVM (coreth)"
+block_time_s = 2
+docs = "https://build.avax.network/docs"
+reviewed = "2026-06"

@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install -e ".[dev]"
+          solc-select install 0.8.28
+          solc-select use 0.8.28
+      - name: Test
+        run: pytest -q
+      - name: Scan the demo contract (SARIF)
+        run: chaindrift scan examples/OmniStake.sol -o chaindrift.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: github.event_name == 'push'
+        with:
+          sarif_file: chaindrift.sarif
+          category: chaindrift
